@@ -12,42 +12,28 @@
 
 ## 사전 조건
 
-- **Next.js App Router** 프로젝트 (`src/app` 또는 `app` 디렉터리 존재)
+- **Next.js** App Router / **React+ Vite** / **Vue+Vite** / **Nuxt**
 - Node.js 18+
 - `package.json` 존재
 
-## 자동 설치 (권장)
+## 자동 설치
 
 ```bash
 npx web-vital-kit init
-# 또는
-npx github:LEEHEEWON123/web-vital-cheking init
+# 프레임워크 자동 감지: next | react | vue | nuxt
+npx web-vital-kit init --framework react
 ```
 
-설치 후:
+## 핵심: 도메인 자동 추적 (프레임워크별 스캔 경로)
 
-```bash
-yarn install
-```
+| 프레임워크 | 스캔 폴더 | 예시 도메인 |
+|-----------|----------|------------|
+| Next.js | `src/app/` | `/series`, `/my-voice` |
+| React (Vite) | `src/pages/` | `/series`, `/alarm` |
+| Vue (Vite) | `src/pages/` | `/series`, `/alarm` |
+| Nuxt | `pages/` | `/series`, `/my-voice` |
 
-## 핵심: 도메인 자동 추적
-
-`src/app/` **1뎁스 폴더 = 도메인**으로 자동 인식됩니다. 별도 설정 파일이 필요 없습니다.
-
-```
-src/app/
-├── page.tsx          → 도메인 /
-├── series/           → /series   (폴더 추가 시 자동 추적)
-├── alarm/            → /alarm
-└── my-voice/         → /my-voice
-```
-
-| 동작 | 설명 |
-|------|------|
-| 폴더 추가 | `src/app/series/` 생성 → `/series` 도메인 자동 등록 |
-| API 스캔 | `GET /web-vital/api/domains` — 매 요청마다 app/ 재스캔 |
-| 수집 | `/series/123` 방문 → `domain: "/series"` 로 저장 |
-| dev 로그 | `src/web-vital-logs/series/2026-06-30.ndjson` |
+폴더 추가 시 `GET /web-vital/api/domains` 재요청으로 자동 반영.
 
 ## 설치되는 것
 

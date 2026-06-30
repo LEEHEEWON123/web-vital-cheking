@@ -1,0 +1,6 @@
+{
+  "framework": "vue",
+  "pagesDir": "src/pages",
+  "extensions": [".vue"],
+  "logsDir": "src/web-vital-logs"
+}

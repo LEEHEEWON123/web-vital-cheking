@@ -1,0 +1,6 @@
+{
+  "framework": "react",
+  "pagesDir": "src/pages",
+  "extensions": [".tsx", ".jsx", ".ts", ".js"],
+  "logsDir": "src/web-vital-logs"
+}
