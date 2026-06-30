@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 
 type DeviceType = "mobile" | "tablet" | "desktop";
 
+interface AppDomain {
+  domain: string;
+  folder: string;
+  routes: string[];
+  autoTracked: true;
+}
+
 interface StoredMetric {
   name: string;
   value: number;
@@ -12,6 +19,7 @@ interface StoredMetric {
   rating: "good" | "needs-improvement" | "poor";
   navigationType: string;
   path?: string;
+  domain?: string;
   deviceType?: DeviceType;
   receivedAt: string;
 }
@@ -41,18 +49,27 @@ function formatValue(name: string, value: number): string {
   return Math.round(value).toLocaleString();
 }
 
+function metricDomain(m: StoredMetric): string {
+  return m.domain ?? (m.path === "/" ? "/" : `/${(m.path ?? "/").split("/").filter(Boolean)[0] ?? ""}`);
+}
+
 export default function WebVitalDashboardPage() {
   const [metrics, setMetrics] = useState<StoredMetric[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedPath, setSelectedPath] = useState<string>("");
+  const [selectedDomain, setSelectedDomain] = useState<string>("all");
+  const [selectedPath, setSelectedPath] = useState<string>("all");
   const [selectedDevice, setSelectedDevice] = useState<string>("all");
-  const [appRoutes, setAppRoutes] = useState<string[]>([]);
+  const [appDomains, setAppDomains] = useState<AppDomain[]>([]);
+  const [scannedAt, setScannedAt] = useState<string>("");
 
   useEffect(() => {
-    fetch("/web-vital/api/routes")
+    fetch("/web-vital/api/domains")
       .then((res) => res.json())
-      .then((data) => setAppRoutes(data.routes ?? []))
-      .catch(() => setAppRoutes([]));
+      .then((data) => {
+        setAppDomains(data.domains ?? []);
+        setScannedAt(data.scannedAt ?? "");
+      })
+      .catch(() => setAppDomains([]));
   }, []);
 
   async function load() {
@@ -66,25 +83,35 @@ export default function WebVitalDashboardPage() {
     }
   }
 
-  const filtered = metrics.filter((m) => {
-    if (selectedPath && selectedPath !== "all" && (m.path ?? "/") !== selectedPath)
-      return false;
+  const domainFiltered =
+    selectedDomain === "all"
+      ? metrics
+      : metrics.filter((m) => metricDomain(m) === selectedDomain);
+
+  const routesInDomain =
+    selectedDomain === "all"
+      ? []
+      : (appDomains.find((d) => d.domain === selectedDomain)?.routes ?? []);
+
+  const pathOptions = [
+    "all",
+    ...Array.from(
+      new Set([
+        ...routesInDomain,
+        ...domainFiltered.map((m) => m.path ?? "/"),
+      ])
+    ).sort(),
+  ];
+
+  const filtered = domainFiltered.filter((m) => {
+    if (selectedPath !== "all" && (m.path ?? "/") !== selectedPath) return false;
     if (
-      selectedDevice &&
       selectedDevice !== "all" &&
       (m.deviceType ?? "desktop") !== selectedDevice
     )
       return false;
     return true;
   });
-
-  const pathsFromMetrics = Array.from(
-    new Set(metrics.map((m) => m.path ?? "/").filter(Boolean))
-  );
-  const pathOptions = [
-    "all",
-    ...Array.from(new Set([...appRoutes, ...pathsFromMetrics])).sort(),
-  ];
 
   const deviceOptions: Array<"all" | DeviceType> = [
     "all",
@@ -109,10 +136,36 @@ export default function WebVitalDashboardPage() {
         <h1 className="mb-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Web Vitals 대시보드
         </h1>
+        <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">app/</code>{" "}
+          1뎁스 폴더를 자동 스캔해 도메인별 추적합니다.{" "}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">/series</code>,{" "}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">/alarm</code>,{" "}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">/my-voice</code>{" "}
+          등 폴더가 추가되면 재스캔 시 자동 반영됩니다.
+        </p>
+
+        {appDomains.length > 0 && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {appDomains.map((d) => (
+              <span
+                key={d.domain}
+                className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                title={`폴더: app/${d.folder === "_root" ? "page.tsx" : d.folder}/ · 라우트 ${d.routes.length}개`}
+              >
+                {d.domain}
+                {d.routes.length > 1 ? ` (+${d.routes.length - 1})` : ""}
+              </span>
+            ))}
+            {scannedAt && (
+              <span className="self-center text-xs text-zinc-400">
+                스캔: {new Date(scannedAt).toLocaleString("ko-KR")}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="mb-6 flex flex-wrap items-center gap-3">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            수집된 지표를 페이지별로 조회. 다른 탭에서 페이지를 열거나 새로고침하면 값이 쌓임.
-          </p>
           <button
             type="button"
             onClick={() => load()}
@@ -124,20 +177,39 @@ export default function WebVitalDashboardPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              도메인
+            </span>
+            <select
+              value={selectedDomain}
+              onChange={(e) => {
+                setSelectedDomain(e.target.value);
+                setSelectedPath("all");
+              }}
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="all">전체</option>
+              {appDomains.map((d) => (
+                <option key={d.domain} value={d.domain}>
+                  {d.domain}
+                </option>
+              ))}
+            </select>
+          </div>
           {pathOptions.length > 1 && (
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 페이지
               </span>
               <select
-                value={selectedPath || "all"}
+                value={selectedPath}
                 onChange={(e) => setSelectedPath(e.target.value)}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
               >
-                <option value="all">전체</option>
-                {pathOptions.filter((p) => p !== "all").map((path) => (
-                  <option key={path} value={path}>
-                    {path || "/"}
+                {pathOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p === "all" ? "전체" : p || "/"}
                   </option>
                 ))}
               </select>
@@ -148,7 +220,7 @@ export default function WebVitalDashboardPage() {
               기기
             </span>
             <select
-              value={selectedDevice || "all"}
+              value={selectedDevice}
               onChange={(e) => setSelectedDevice(e.target.value)}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
             >
@@ -201,8 +273,9 @@ export default function WebVitalDashboardPage() {
             <section>
               <h2 className="mb-3 text-lg font-medium text-zinc-900 dark:text-zinc-100">
                 최근 수집 이력 (최신 순)
-                {selectedPath && selectedPath !== "all" ? ` · ${selectedPath}` : ""}
-                {selectedDevice && selectedDevice !== "all"
+                {selectedDomain !== "all" ? ` · ${selectedDomain}` : ""}
+                {selectedPath !== "all" ? ` · ${selectedPath}` : ""}
+                {selectedDevice !== "all"
                   ? ` · ${DEVICE_LABEL[selectedDevice as DeviceType]}`
                   : ""}
               </h2>
@@ -215,6 +288,9 @@ export default function WebVitalDashboardPage() {
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">
+                          도메인
+                        </th>
                         <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">
                           페이지
                         </th>
@@ -241,6 +317,9 @@ export default function WebVitalDashboardPage() {
                           key={`${m.id}-${m.receivedAt}-${i}`}
                           className="border-b border-zinc-100 dark:border-zinc-800"
                         >
+                          <td className="px-4 py-2 font-medium text-zinc-700 dark:text-zinc-300">
+                            {metricDomain(m)}
+                          </td>
                           <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
                             {m.path ?? "/"}
                           </td>

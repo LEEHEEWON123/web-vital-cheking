@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { isValidAppPath } from "../lib/app-routes";
+import {
+  domainToLogFolder,
+  isValidAppPath,
+  pathnameToDomain,
+} from "../lib/app-routes";
 
 /** POST body: web-vitals Metric 직렬화 가능한 필드만 */
 export interface VitalsPayload {
@@ -12,6 +16,8 @@ export interface VitalsPayload {
   rating: "good" | "needs-improvement" | "poor";
   navigationType: string;
   path?: string;
+  /** pathname에서 자동 추출한 도메인 prefix (예: /series, /my-voice) */
+  domain?: string;
   deviceType?: "mobile" | "tablet" | "desktop";
 }
 
@@ -96,9 +102,7 @@ function normalizePath(p: string): string {
 }
 
 function pathToLogFolder(pathname: string): string {
-  const trimmed = pathname.replace(/^\/+/, "").trim();
-  if (!trimmed) return "_root";
-  return trimmed.split("/").join("-");
+  return domainToLogFolder(pathnameToDomain(pathname));
 }
 
 function appendVitalsEntry(body: VitalsPayload): "stored" | "skipped" | "invalid" {
@@ -118,6 +122,7 @@ function appendVitalsEntry(body: VitalsPayload): "stored" | "skipped" | "invalid
   }
 
   const pathNormalized = normalizePath(pathnamePayload ?? "/");
+  const domain = pathnameToDomain(pathNormalized);
 
   if (!isValidAppPath(pathNormalized)) {
     return "skipped";
@@ -131,6 +136,7 @@ function appendVitalsEntry(body: VitalsPayload): "stored" | "skipped" | "invalid
     rating: rating ?? "good",
     navigationType: navigationType ?? "",
     path: pathNormalized,
+    domain,
     deviceType:
       deviceType === "mobile" ||
       deviceType === "tablet" ||
@@ -212,5 +218,6 @@ export async function POST(request: Request) {
 
 export async function GET() {
   const list = [...store].reverse();
-  return NextResponse.json({ metrics: list });
+  const domains = [...new Set(list.map((m) => m.domain ?? pathnameToDomain(m.path ?? "/")))];
+  return NextResponse.json({ metrics: list, domains });
 }

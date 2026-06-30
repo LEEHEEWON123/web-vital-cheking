@@ -4,8 +4,7 @@
 
 ## 트리거 문구 (예시)
 
-사용자가 아래와 비슷하게 요청하면 이 키트를 설치합니다.
-
+- **"웹 바이탈 구축해줘"** ← Cursor에서 가장 많이 쓰는 문구
 - "이 프로젝트에 맞는 웹 바이탈 구현해줘"
 - "Web Vitals 수집·대시보드 구축해줘"
 - "Core Web Vitals 모니터링 추가해줘"
@@ -19,93 +18,83 @@
 
 ## 자동 설치 (권장)
 
-프로젝트 루트에서:
-
 ```bash
 npx web-vital-kit init
+# 또는
+npx github:LEEHEEWON123/web-vital-cheking init
 ```
 
-또는 로컬 클론에서:
+설치 후:
 
 ```bash
-node /path/to/web-vital-cheking/bin/web-vital-kit.mjs init --cwd .
+yarn install
 ```
 
-설치 후 패키지 매니저로 의존성 설치:
+## 핵심: 도메인 자동 추적
 
-```bash
-yarn install   # 또는 npm install / pnpm install
+`src/app/` **1뎁스 폴더 = 도메인**으로 자동 인식됩니다. 별도 설정 파일이 필요 없습니다.
+
 ```
+src/app/
+├── page.tsx          → 도메인 /
+├── series/           → /series   (폴더 추가 시 자동 추적)
+├── alarm/            → /alarm
+└── my-voice/         → /my-voice
+```
+
+| 동작 | 설명 |
+|------|------|
+| 폴더 추가 | `src/app/series/` 생성 → `/series` 도메인 자동 등록 |
+| API 스캔 | `GET /web-vital/api/domains` — 매 요청마다 app/ 재스캔 |
+| 수집 | `/series/123` 방문 → `domain: "/series"` 로 저장 |
+| dev 로그 | `src/web-vital-logs/series/2026-06-30.ndjson` |
 
 ## 설치되는 것
 
 | 경로 | 설명 |
 |------|------|
-| `src/app/web-vital/` | 수집·API·대시보드 (라우트 prefix: `/web-vital`) |
-| `scripts/run-lighthouse-network*.mjs` | Lighthouse CLI 측정 |
-| `scripts/lighthouse-throttle-presets.json` | Slow4G / Fast4G / None 프리셋 |
-| `docs/vitals/` | Core Web Vitals 기준 문서 |
-| `docs/lighthouse/` | Lighthouse 결과 아카이브 |
+| `src/app/web-vital/` | 수집·API·대시보드 (`/web-vital` prefix) |
+| `.cursor/rules/web-vital-kit.mdc` | **Cursor AI 자연어 트리거 룰** |
+| `scripts/run-lighthouse-network*.mjs` | Lighthouse CLI |
+| `docs/vitals/`, `docs/lighthouse/` | 문서 |
 
 ### API 엔드포인트
 
-- `POST /web-vital/api` — 지표 수집 (LCP, INP, CLS, TTFB)
-- `GET /web-vital/api` — 수집 목록 조회 (메모리, 최대 500건)
-- `GET /web-vital/api/routes` — 앱 라우트 스캔
-- `GET /web-vital/dashboard` — 대시보드 UI
-
-### package.json 변경
-
-**dependencies:** `web-vitals`  
-**devDependencies:** `lighthouse`  
-**scripts:**
-
-```json
-{
-  "perf:lighthouse:slow4g": "node scripts/run-lighthouse-network.mjs slow4g",
-  "perf:lighthouse:fast4g": "node scripts/run-lighthouse-network.mjs fast4g",
-  "perf:lighthouse:none": "node scripts/run-lighthouse-network.mjs none",
-  "perf:lighthouse:network": "node scripts/run-lighthouse-network-all.mjs"
-}
-```
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/web-vital/api` | 지표 수집 (LCP, INP, CLS, TTFB) |
+| GET | `/web-vital/api` | 수집 목록 + domains 요약 |
+| GET | `/web-vital/api/domains` | **app/ 스캔 — 도메인 자동 목록** |
+| GET | `/web-vital/api/routes` | 전체 App Router 라우트 |
+| GET | `/web-vital/dashboard` | 도메인·페이지별 대시보드 |
 
 ### layout.tsx 패치
-
-`WebVitalsInitializer`를 루트 `layout.tsx`의 `<body>` 안에 추가합니다.
 
 ```tsx
 import { WebVitalsInitializer } from "./web-vital/WebVitalsInitializer";
 
-// ...
 <body>
   <WebVitalsInitializer />
   {children}
 </body>
 ```
 
-CLI가 자동 패치합니다. 실패 시 위 코드를 수동 추가하세요.
+## Cursor AI 연동
 
-## 수동 설치 (CLI 없이)
+`init` 실행 시 `.cursor/rules/web-vital-kit.mdc` 가 대상 프로젝트에 복사됩니다.
 
-1. `templates/nextjs-app-router/` 내용을 대상 프로젝트에 복사
-2. `package.json`에 의존성·스크립트 추가
-3. `.gitignore`에 `src/web-vital-logs/`, `docs/lighthouse/network-profiles/latest-*.json` 추가
-4. `layout.tsx`에 `WebVitalsInitializer` 추가
+Cursor에서 **"웹 바이탈 구축해줘"** 입력 → 룰이 트리거되어 `npx web-vital-kit init` 실행.
 
 ## 검증 체크리스트
 
-- [ ] `yarn dev` 후 `/web-vital/dashboard` 접속 가능
-- [ ] 다른 페이지 방문 후 대시보드에서 LCP/INP/CLS/TTFB 수집 확인
-- [ ] dev 환경에서 `src/web-vital-logs/` ndjson 생성 확인
-- [ ] `yarn build && yarn start` 후 Lighthouse 스크립트 실행 가능
-
-## 주의사항
-
-- 수집 데이터는 **서버 메모리**에만 저장 (재시작 시 초기화). 운영 영구 저장은 DB 연동 필요.
-- `src/app/web-vital/lib/app-routes.ts`는 `src/app` 기준으로 라우트를 스캔합니다. `app/` only 구조면 해당 파일의 `APP_DIR`을 수정하세요.
-- 이미 `/web-vital` 폴더가 있으면 `npx web-vital-kit init --force` 사용.
+- [ ] `/web-vital/dashboard` 접속
+- [ ] `/web-vital/api/domains` 에 app/ 도메인 목록 표시
+- [ ] `src/app/series/` 추가 후 domains API에 `/series` 반영
+- [ ] 페이지 방문 후 도메인별 지표 수집
+- [ ] `src/web-vital-logs/series/` ndjson 생성 (dev)
 
 ## 관련 파일
 
 - [skills/install-web-vitals/SKILL.md](./skills/install-web-vitals/SKILL.md) — Cursor Skill
+- [.cursor/rules/web-vital-kit.mdc](./.cursor/rules/web-vital-kit.mdc) — Cursor Rule
 - [README.md](./README.md) — 사용자 문서

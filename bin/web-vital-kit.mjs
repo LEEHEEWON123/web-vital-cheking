@@ -268,6 +268,15 @@ function install(projectRoot, { dryRun, force }) {
     log(`[dry-run] Would copy docs/`);
   }
 
+  const cursorRulesSrc = path.join(TEMPLATE_ROOT, ".cursor", "rules");
+  const cursorRulesDest = path.join(projectRoot, ".cursor", "rules");
+  if (!dryRun) {
+    copyDirRecursive(cursorRulesSrc, cursorRulesDest, false);
+    log("Copied Cursor rule → .cursor/rules/web-vital-kit.mdc");
+  } else {
+    log(`[dry-run] Would copy .cursor/rules/`);
+  }
+
   if (!dryRun) {
     mergePackageJson(projectRoot, false);
     log("Updated package.json (web-vitals, lighthouse, perf:* scripts)");
@@ -287,6 +296,7 @@ function install(projectRoot, { dryRun, force }) {
   log("  2. yarn dev");
   log(`  3. Open ${ROUTE_PREFIX}/dashboard`);
   log("  4. Browse other pages — metrics POST to /web-vital/api");
+  log(`  5. GET ${ROUTE_PREFIX}/api/domains — app/ 폴더 자동 스캔 (도메인 추적)`);
   log("");
   log("Lighthouse (after build + start):");
   log("  LIGHTHOUSE_URL=http://127.0.0.1:3000 yarn perf:lighthouse:network");
@@ -311,8 +321,9 @@ Routes installed:
   ${ROUTE_PREFIX}/api/routes    App route list
 
 Natural language (Claude / Cursor):
-  "이 프로젝트에 맞는 웹 바이탈 구현해줘"
+  "웹 바이탈 구축해줘" / "이 프로젝트에 맞는 웹 바이탈 구현해줘"
   → Run: npx web-vital-kit init
+  → Cursor: .cursor/rules/web-vital-kit.mdc 자동 설치
   → Or follow AGENTS.md / skills/install-web-vitals/SKILL.md
 `);
 }
