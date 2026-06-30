@@ -1,0 +1,36 @@
+{
+  "name": "web-vital-kit",
+  "version": "0.1.0",
+  "description": "Next.js App Router용 Web Vitals 수집·대시보드·Lighthouse 측정 자동 구축 도구",
+  "type": "module",
+  "bin": {
+    "web-vital-kit": "./bin/web-vital-kit.mjs"
+  },
+  "files": [
+    "bin",
+    "templates",
+    "skills",
+    "AGENTS.md"
+  ],
+  "keywords": [
+    "web-vitals",
+    "nextjs",
+    "lighthouse",
+    "performance",
+    "core-web-vitals",
+    "lcp",
+    "inp",
+    "cls"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LEEHEEWON123/web-vital-cheking.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test:cli": "node bin/web-vital-kit.mjs --help"
+  }
+}

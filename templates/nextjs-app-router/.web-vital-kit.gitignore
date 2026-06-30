@@ -1,0 +1,8 @@
+# web-vital-kit 설치 시 .gitignore에 추가할 항목
+
+# Web Vitals 로그 (경로별·날짜별 src/web-vital-logs)
+src/web-vital-logs/
+
+# Lighthouse 원시 리포트
+docs/lighthouse/network-profiles/latest-*.json
+lighthouse-report.json

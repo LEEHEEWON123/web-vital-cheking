@@ -1,0 +1,29 @@
+{
+  "reference": "Lighthouse CLI --throttling-method=devtools (throughput Kbps, request latency ms). Nominal Mbps labels match Chrome DevTools network preset naming (Slow 4G / Fast 4G).",
+  "slow4g": {
+    "label": "Slow 4G",
+    "throttlingMethod": "devtools",
+    "downloadThroughputKbps": 1600,
+    "uploadThroughputKbps": 750,
+    "requestLatencyMs": 150,
+    "cpuSlowdownMultiplier": 4,
+    "formFactor": "mobile",
+    "screenEmulation": true
+  },
+  "fast4g": {
+    "label": "Fast 4G",
+    "throttlingMethod": "devtools",
+    "downloadThroughputKbps": 9000,
+    "uploadThroughputKbps": 1500,
+    "requestLatencyMs": 80,
+    "cpuSlowdownMultiplier": 2,
+    "formFactor": "mobile",
+    "screenEmulation": true
+  },
+  "none": {
+    "label": "No throttling",
+    "description": "Lighthouse CLI: 화면 에뮬·네트워크/UA 에뮬 끔",
+    "throttlingMethod": "provided",
+    "noEmulation": true
+  }
+}
